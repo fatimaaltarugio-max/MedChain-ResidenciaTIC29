@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedChain - Histórico de Exames Descentralizado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 { color: #007bff; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 0.9em; }
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        h2 { color: #333; font-size: 1.2em; margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #28a745; }
+        .btn-secondary:hover { background-color: #218838; }
+        .exam-card {
+            background: white;
+            padding: 15px;
+            border-left: 5px solid #007bff;
+            margin-top: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .exam-card p { margin: 5px 0; font-size: 0.95em; }
+        .status { text-align: center; font-weight: bold; color: #e67e22; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛡️ MedChain</h1>
+    <div class="subtitle">Histórico de Exames Médicos Descentralizado & Imutável (Residência TIC 29)</div>
+
+    <div id="status" class="status">Clique abaixo para conectar sua carteira MetaMask</div>
+    <button id="connectBtn" onclick="connectWallet()">Conectar MetaMask</button>
+
+    <div class="section" style="margin-top: 25px;">
+        <h2>📝 Registrar Novo Exame (Área do Hospital/Médico)</h2>
+        <div class="form-group">
+            <label>ID / CPF do Paciente:</label>
+            <input type="text" id="regPatientId" placeholder="Ex: 123456">
+        </div>
+        <div class="form-group">
+            <label>Tipo de Exame:</label>
+            <input type="text" id="examType" placeholder="Ex: Hemograma Completo">
+        </div>
+        <div class="form-group">
+            <label>Nome do Hospital/Laboratório:</label>
+            <input type="text" id="hospitalName" placeholder="Ex: Hospital Central">
+        </div>
+        <div class="form-group">
+            <label>Data do Exame:</label>
+            <input type="text" id="examDate" placeholder="Ex: 27/05/2026">
+        </div>
+        <div class="form-group">
+            <label>Hash do Arquivo (IPFS):</label>
+            <input type="text" id="ipfsHash" placeholder="Ex: QmXoypizjW3WknFiJnKLwHCnL...">
+        </div>
+        <button class="btn-secondary" onclick="registerExam()">Gravar na Blockchain</button>
+    </div>
+
+    <div class="section">
+        <h2>🔍 Consultar Histórico do Paciente</h2>
+        <div class="form-group">
+            <label>Digite o ID / CPF do Paciente:</label>
+            <input type="text" id="searchPatientId" placeholder="Ex: 123456">
+        </div>
+        <button onclick="getExams()">Buscar Prontuário</button>
+         
+        <div id="examsResult"></div>
+    </div>
+</div>
+
+<script>
+    // Endereço oficial do seu contrato inteligente na rede Sepolia
+    const contractAddress = "0x02A2DFBAE046dAc685dfa0a58d6912FC5aE360B4";
+
+    // O ABI informa ao JavaScript como interagir com o contrato em Solidity
+    const contractABI = [
+        "function registerExam(string _patientId, string _examType, string _hospitalName, string _examDate, string _ipfsHash) public",
+        "function getPatientExams(string _patientId) public view returns (tuple(string examType, string hospitalName, string examDate, string ipfsHash, uint256 timestamp)[])"
+    ];
+
+    let provider;
+    let signer;
+    let contract;
+
+    // Função para conectar a página web com a MetaMask
+    async function connectWallet() {
+        if (window.ethereum) {
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                 
+                const address = await signer.getAddress();
+                document.getElementById("status").innerText = "Conectado à carteira: " + address.substring(0,6) + "..." + address.substring(38);
+                document.getElementById("status").style.color = "#28a745";
+                document.getElementById("connectBtn").style.display = "none";
+            } catch (error) {
+                console.error(error);
+                document.getElementById("status").innerText = "Erro ao conectar carteira.";
+            }
+        } else {
+            alert("Por favor, instale a MetaMask para usar essa aplicação!");
+        }
+    }
+
+    // Função que chama a escrita do contrato inteligente
+    async function registerExam() {
+        if (!contract) return alert("Por favor, conecte a MetaMask primeiro!");
+         
+        const patientId = document.getElementById("regPatientId").value;
+        const examType = document.getElementById("examType").value;
+        const hospitalName = document.getElementById("hospitalName").value;
+        const examDate = document.getElementById("examDate").value;
+        const ipfsHash = document.getElementById("ipfsHash").value;
+
+        if(!patientId || !examType || !hospitalName) return alert("Preencha os campos principais!");
+
+        try {
+            document.getElementById("status").innerText = "Enviando transação para a Blockchain...";
+            document.getElementById("status").style.color = "#e67e22";
+             
+            // Chama a função do Smart Contract
+            const tx = await contract.registerExam(patientId, examType, hospitalName, examDate, ipfsHash);
+             
+            document.getElementById("status").innerText = "Aguardando confirmação da rede...";
+            await tx.wait(); // Espera a transação ser minerada
+             
+            document.getElementById("status").innerText = "Exame registrado com sucesso com segurança máxima!";
+            document.getElementById("status").style.color = "#28a745";
+             
+            // Limpa os campos
+            document.getElementById("examType").value = "";
+            document.getElementById("hospitalName").value = "";
+        } catch (error) {
+            console.error(error);
+            document.getElementById("status").innerText = "Erro ao registrar exame.";
+            document.getElementById("status").style.color = "#dc3545";
+        }
+    }
+
+    // Função que lê os dados do contrato (gratuito, sem taxa de gas)
+    async function getExams() {
+        if (!contract) return alert("Por favor, conecte a MetaMask primeiro!");
+         
+        const patientId = document.getElementById("searchPatientId").value;
+        if(!patientId) return alert("Digite o ID do paciente!");
+
+        try {
+            const exams = await contract.getPatientExams(patientId);
+            const resultDiv = document.getElementById("examsResult");
+            resultDiv.innerHTML = "";
+
+            if(exams.length === 0) {
+                resultDiv.innerHTML = "<p style='color: #666; margin-top:15px;'>Nenhum histórico encontrado para este ID.</p>";
+                return;
+            }
+
+            // Cria os cards visuais na tela para cada exame retornado do array
+            exams.forEach(exam => {
+                const card = document.createElement("div");
+                card.className = "exam-card";
+                card.innerHTML = `
+                    <p><strong>🩺 Tipo:</strong> ${exam.examType}</p>
+                    <p><strong>🏥 Local:</strong> ${exam.hospitalName}</p>
+                    <p><strong>📅 Data do Exame:</strong> ${exam.examDate}</p>
+                    <p><strong>🔗 Código de Autenticidade (IPFS):</strong> <small style="color: #007bff;">${exam.ipfsHash}</small></p>
+                `;
+                resultDiv.appendChild(card);
+            });
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao buscar exames.");
+        }
+    }
+</script>
+</body>
+</html>
