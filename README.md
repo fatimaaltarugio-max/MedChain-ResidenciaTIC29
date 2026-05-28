@@ -1,5 +1,9 @@
 # 🛡️ MedChain - Histórico de Exames Descentralizado & Imutável
 
+Aluna: Maria de Fátima Altarugio de Oliveira
+CPF: 141.637.616-08
+Email: maria.altarugio@grupomultilaser.com.br
+
 Projeto desenvolvido para a Residência TIC 29
 
 O **MedChain** é um Prontuário Médico Descentralizado focado na resolução de um problema crítico da saúde pública: a **fragmentação de dados médicos**. Através da tecnologia Blockchain, garantimos que o histórico de exames de um paciente seja seguro, imutável, privado e acessível por qualquer instituição de saúde autorizada, eliminando a necessidade de laudos impressos ou pendrives.
